@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torchvision.models as models
 
 
@@ -29,12 +30,12 @@ class ColorizationModel(nn.Module):
     def forward(self, x):
         x = self.mid_level_resnet(x)
 
-        x = nn.ReLU(self.bn2(self.conv1(x)))
+        x = F.relu(self.bn2(self.conv1(x)))
         x = self.upsample(x)
-        x = nn.ReLU(self.bn3(self.conv2(x)))
-        x = nn.ReLU(self.conv3(x))
+        x = F.relu(self.bn3(self.conv2(x)))
+        x = F.relu(self.conv3(x))
         x = self.upsample(x)
-        x = nn.ReLU(self.conv4(x))
+        x = F.relu(self.conv4(x))
         x = self.upsample(self.conv5(x))
 
         return x

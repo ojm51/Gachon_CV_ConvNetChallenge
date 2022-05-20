@@ -9,7 +9,6 @@ import torch.optim as optim
 import torch.nn.functional as F
 from dataloader import dataset
 from dataloader import transform as tf
-import torchvision.models as models
 from model import ColorizationModel, AverageMeter
 import cv2
 
