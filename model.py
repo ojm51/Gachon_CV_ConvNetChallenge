@@ -40,6 +40,9 @@ class ColorizationModel(nn.Module):
 
         return x
 
+    def get_params(self):
+        return list(self.parameters())
+
 
 class AverageMeter(object):
     def __init__(self):

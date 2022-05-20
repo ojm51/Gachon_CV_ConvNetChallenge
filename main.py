@@ -9,6 +9,7 @@ import torch.optim as optim
 from dataloader import dataset
 from dataloader import transform as tf
 from model import ColorizationModel, AverageMeter
+import torchvision.models as models
 import cv2
 
 
@@ -130,8 +131,7 @@ if __name__ == "__main__":
         model = model.cuda()
         criterion = criterion.cuda()
 
-    params = [p for p in model.parameters() if p.requires_grad]
-    optimizer = optim.Adam(params, lr=1e-2, weight_decay=0.0)
+    optimizer = optim.Adam(model.get_params(), lr=1e-2, weight_decay=0.0)
 
     for e in range(epochs):
         train(train_dataloader, model, criterion, optimizer, e)
