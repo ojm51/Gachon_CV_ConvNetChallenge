@@ -6,7 +6,6 @@ import torch
 import torch.utils.data as data
 import torch.nn as nn
 import torch.optim as optim
-import torch.nn.functional as F
 from dataloader import dataset
 from dataloader import transform as tf
 from model import ColorizationModel, AverageMeter
