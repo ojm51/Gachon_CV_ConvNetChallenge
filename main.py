@@ -28,13 +28,11 @@ def tensor2im(input_image, imtype=np.uint8):
 class ColorizationModel(nn.Module):
     def __int__(self, mid_input_size=128, global_input_size=512):
         super(ColorizationModel, self).__init__()
-        self.params = nn.Parameter()
 
         # encoder
         resnet = models.resnet18()
         resnet.conv1.weight = nn.Parameter(resnet.conv1.weight.sum(dim=1).unsqueeze(1).data)
         self.mid_level_resnet = nn.Sequential(*list(resnet.children())[0:6])
-        self.params.append(resnet.conv1.weight)
 
         # decoder
         self.deconv1_new = nn.ConvTranspose2d(mid_input_size, 128, kernel_size=4, stride=2, padding=1)
@@ -174,7 +172,6 @@ if __name__ == "__main__":
 
     model = ColorizationModel()
     criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=1e-2, weight_decay=0.0)
 
     save_images = True
     best_losses = 1e10
@@ -183,6 +180,9 @@ if __name__ == "__main__":
     if use_gpu:
         model = model.cuda()
         criterion = criterion.cuda()
+
+    params = [p for p in model.parameters() if p.requires_grad]
+    optimizer = optim.Adam(params, lr=1e-2, weight_decay=0.0)
 
     for e in range(epochs):
         train(train_dataloader, model, criterion, optimizer, e)
