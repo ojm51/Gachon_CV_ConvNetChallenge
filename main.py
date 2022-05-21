@@ -1,5 +1,5 @@
 import os
-import time
+import shutil
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
@@ -8,8 +8,9 @@ import torch.nn as nn
 import torch.optim as optim
 from dataloader import dataset
 from dataloader import transform as tf
-from model import ColorizationModel, AverageMeter
 import torchvision.models as models
+import tqdm
+from model import ColorizationModel, AverageMeter
 import cv2
 
 
@@ -26,81 +27,77 @@ def tensor2im(input_image, imtype=np.uint8):
 
 
 def train(loader_train, model_train, crit, opt, epoch):
-    print('Starting training epoch {}'.format(epoch + 1))
     model_train.train()
+    set_loss = AverageMeter()
 
-    batch_time, data_time, set_loss = AverageMeter(), AverageMeter(), AverageMeter()
-    start = time.time()
+    print('Starting training epoch {}'.format(epoch + 1))
 
-    for i, component in enumerate(loader_train):
+    for i, data_t in enumerate(loader_train):
         if use_gpu:
-            l = component["l"].cuda()
-            ab = component["ab"].cuda()
-            hint = component["hint"].cuda()
-            mask = component["mask"].cuda()
+            l = data_t['l'].cuda()
+            ab = data_t['ab'].cuda()
+            hint = data_t['hint'].cuda()
 
-        gt_image = torch.cat((l, ab), dim=1)
-        hint_image = torch.cat((l, hint, mask), dim=1)
-        data_time.update(time.time() - start)
+        img_lab = torch.cat((l, ab), dim=1)
+        img_hint = torch.cat((l, hint), dim=1)
 
-        output_hint = model_train(hint_image)
-        loss = crit(output_hint, gt_image)
-        set_loss.update(loss.item(), hint_image.size(0))
+        output = model_train(img_hint, )
+        loss = crit(output, img_lab)
+        set_loss.update(loss.item(), img_hint.size(0))
 
         opt.zero_grad()
         loss.backward()
         opt.step()
 
-        batch_time.update(time.time() - start)
-        start = time.time()
-
-        if i % 225 == 0:
-            print('Epoch: [{0}][{1}/{2}]\t'
-                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})\t'.format(
-                    epoch + 1, i, len(loader_train), batch_time=batch_time,
-                    data_time=data_time, loss=set_loss))
+        if i % 100 == 0:
+            print('Epoch: [{0}][{1}/{2}]\tLoss {loss.val:.4f} ({loss.avg:.4f})\t'.format(epoch + 1, i,
+                                                                                         len(loader_train),
+                                                                                         loss=set_loss))
 
     print('Finished training epoch {}'.format(epoch + 1))
 
 
 def validate(loader_val, model_val, crit):
     model_val.eval()
+    set_loss = AverageMeter()
 
-    batch_time, data_time, set_loss = AverageMeter(), AverageMeter(), AverageMeter()
-    start = time.time()
-
-    for i, component in enumerate(loader_val):
+    for i, data_v in enumerate(tqdm.tqdm(loader_val)):
         if use_gpu:
-            l = component["l"].cuda()
-            ab = component["ab"].cuda()
-            hint = component["hint"].cuda()
-            mask = component["mask"].cuda()
+            l = data_v['l'].cuda()
+            ab = data_v['ab'].cuda()
+            hint = data_v['hint'].cuda()
 
-        gt_image = torch.cat((l, ab), dim=1)
-        hint_image = torch.cat((l, hint, mask), dim=1)
-        data_time.update(time.time() - start)
-        output_hint = model_val(hint_image)
+        img_lab = torch.cat((l, ab), dim=1)
+        img_hint = torch.cat((l, hint), dim=1)
 
-        loss = crit(output_hint, gt_image)
-        set_loss.update(loss.item(), hint_image.size(0))
-
-        batch_time.update(time.time() - start)
-        start = time.time()
+        output = model_val(img_hint)
+        loss = crit(output, img_lab)
+        set_loss.update(loss.item(), img_hint.size(0))
 
         if i % 100 == 0:
-            print('Validate: [{0}/{1}]\t'
-                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})\t'.format(
-                    i, len(loader_val), batch_time=batch_time, loss=set_loss))
-        out_hint_np = tensor2im(output_hint)
-        out_hint_bgr = cv2.cvtColor(out_hint_np, cv2.COLOR_LAB2BGR)
+            print('Validate: [{0}/{1}]\tLoss {loss.val:.4f} ({loss.avg:.4f})\t'.format(i, len(loader_val), loss=losses))
 
-        cv2.imwrite("outputs/outputs/output_" + str(i) + ".png", out_hint_bgr)
+        output_np = tensor2im(output)
+        output_bgr = cv2.cvtColor(output_np, cv2.COLOR_LAB2BGR)
+
+        hint_np = tensor2im(img_hint)
+        hint_bgr = cv2.cvtColor(hint_np, cv2.COLOR_LAB2BGR)
+
+        lab_np = tensor2im(img_lab)
+        lab_bgr = cv2.cvtColor(lab_np, cv2.COLOR_LAB2BGR)
+
+        psnr = cv2.PSNR(lab_bgr, output_bgr)
+
+        cv2.imwrite("outputs/GroundTruth/" + str(i) + "lab.png", lab_bgr)
+        cv2.imwrite("outputs/Hint/" + str(i) + "hint.png", hint_bgr)
+        cv2.imwrite("outputs/Output/" + "_psnr:" + str(psnr) + ".png", output_bgr)
 
     print('Finished validation.')
     return set_loss.avg
+
+
+def test(loader_test, model_test):
+    model_test.eval()
 
 
 use_gpu = torch.cuda.is_available()
@@ -127,11 +124,11 @@ if __name__ == "__main__":
     best_losses = 1e10
     epochs = 100
 
-    if use_gpu:
-        model = model.cuda()
-        criterion = criterion.cuda()
+    device = torch.device('cuda' if use_gpu else 'cpu')
+    model.to(device)
+    criterion.to(device)
 
-    optimizer = optim.Adam(model.get_params(), lr=1e-2, weight_decay=0.0)
+    optimizer = optim.Adam(model.parameters(), lr=0.0012, weight_decay=1e-6)
 
     for e in range(epochs):
         train(train_dataloader, model, criterion, optimizer, e)
