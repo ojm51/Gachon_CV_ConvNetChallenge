@@ -117,7 +117,7 @@ if __name__ == "__main__":
     criterion = nn.MSELoss()
 
     best_losses = 1e10
-    epochs = 100
+    epochs = 50
 
     device = torch.device('cuda')
     model.to(device)
