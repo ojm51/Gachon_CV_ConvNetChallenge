@@ -8,7 +8,6 @@ import torch.nn as nn
 import torch.optim as optim
 from dataloader import dataset
 from dataloader import transform as tf
-import torchvision.models as models
 import tqdm
 from model import ColorizationModel, AverageMeter
 import cv2
@@ -32,7 +31,7 @@ def train(loader_train, model_train, crit, opt, epoch):
 
     print('Starting training epoch {}'.format(epoch + 1))
 
-    for i, data_t in enumerate(loader_train):
+    for i, data_t in enumerate(tqdm.tqdm(loader_train)):
         if use_gpu:
             l = data_t['l'].cuda()
             ab = data_t['ab'].cuda()
@@ -75,7 +74,8 @@ def validate(loader_val, model_val, crit):
         set_loss.update(loss.item(), img_hint.size(0))
 
         if i % 100 == 0:
-            print('Validate: [{0}/{1}]\tLoss {loss.val:.4f} ({loss.avg:.4f})\t'.format(i, len(loader_val), loss=losses))
+            print('Validate: [{0}/{1}]\tLoss {loss.val:.4f} ({loss.avg:.4f})\t'.format(i, len(loader_val),
+                                                                                       loss=set_loss))
 
         output_np = tensor2im(output)
         output_bgr = cv2.cvtColor(output_np, cv2.COLOR_LAB2BGR)
@@ -94,10 +94,6 @@ def validate(loader_val, model_val, crit):
 
     print('Finished validation.')
     return set_loss.avg
-
-
-def test(loader_test, model_test):
-    model_test.eval()
 
 
 use_gpu = torch.cuda.is_available()
@@ -120,11 +116,10 @@ if __name__ == "__main__":
     model = ColorizationModel()
     criterion = nn.MSELoss()
 
-    save_images = True
     best_losses = 1e10
     epochs = 100
 
-    device = torch.device('cuda' if use_gpu else 'cpu')
+    device = torch.device('cuda')
     model.to(device)
     criterion.to(device)
 
@@ -136,4 +131,9 @@ if __name__ == "__main__":
             losses = validate(val_dataloader, model, criterion)
         if losses < best_losses:
             best_losses = losses
-            torch.save(model.state_dict(), 'checkpoints/model-epoch-{}-losses-{:.3f}.pth'.format(e + 1, losses))
+            PATH = './checkpoints'
+            if os.path.isdir(PATH) is False:
+                os.mkdir(PATH)
+            torch.save({'model': model.state_dict(),
+                        'optimizer': optimizer.state_dict()
+                        }, PATH + '/model-epoch-{}-losses-{:.3f}.pth'.format(e + 1, losses))

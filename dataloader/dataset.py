@@ -22,7 +22,7 @@ class ColorHintDataset(data.Dataset):
             self.examples = [os.path.join(self.root_path, "train", dirs) for dirs in os.listdir(train_dir)]
         elif self.mode == "val":
             val_dir = os.path.join(self.root_path, "val")
-            self.examples = [os.path.join(self.root_path, "validation", dirs) for dirs in os.listdir(val_dir)]
+            self.examples = [os.path.join(self.root_path, "val", dirs) for dirs in os.listdir(val_dir)]
         elif self.mode == "test":
             hint_dir = os.path.join(self.root_path, "hint")
             mask_dir = os.path.join(self.root_path, "mask")
