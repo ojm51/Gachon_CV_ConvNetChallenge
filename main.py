@@ -1,16 +1,13 @@
 import os
-import shutil
 import numpy as np
-import matplotlib.pyplot as plt
 import torch
 import torch.utils.data as data
 import torch.nn as nn
 import torch.optim as optim
 from dataloader import dataset
-from dataloader import transform as tf
 import tqdm
 from model import ColorizationModel, AverageMeter
-import cv2
+from torchvision.models import inception_v3
 
 
 def tensor2im(input_image, imtype=np.uint8):
@@ -36,11 +33,13 @@ def train(loader_train, model_train, crit, opt, epoch):
             l = data_t['l'].cuda()
             ab = data_t['ab'].cuda()
             hint = data_t['hint'].cuda()
+            l_inc = data_t['l_inc'].cuda()
 
         img_lab = torch.cat((l, ab), dim=1)
         img_hint = torch.cat((l, hint), dim=1)
 
-        output = model_train(img_hint, )
+        out_inc = inception(l_inc)
+        output = model_train(img_hint, out_inc.logits)
         loss = crit(output, img_lab)
         set_loss.update(loss.item(), img_hint.size(0))
 
@@ -65,32 +64,19 @@ def validate(loader_val, model_val, crit):
             l = data_v['l'].cuda()
             ab = data_v['ab'].cuda()
             hint = data_v['hint'].cuda()
+            l_inc = data_v['l_inc'].cuda()
 
         img_lab = torch.cat((l, ab), dim=1)
         img_hint = torch.cat((l, hint), dim=1)
 
-        output = model_val(img_hint)
+        out_inc = inception(l_inc)
+        output = model_val(img_hint, out_inc.logits)
         loss = crit(output, img_lab)
         set_loss.update(loss.item(), img_hint.size(0))
 
         if i % 100 == 0:
             print('Validate: [{0}/{1}]\tLoss {loss.val:.4f} ({loss.avg:.4f})\t'.format(i, len(loader_val),
                                                                                        loss=set_loss))
-
-        output_np = tensor2im(output)
-        output_bgr = cv2.cvtColor(output_np, cv2.COLOR_LAB2BGR)
-
-        hint_np = tensor2im(img_hint)
-        hint_bgr = cv2.cvtColor(hint_np, cv2.COLOR_LAB2BGR)
-
-        lab_np = tensor2im(img_lab)
-        lab_bgr = cv2.cvtColor(lab_np, cv2.COLOR_LAB2BGR)
-
-        psnr = cv2.PSNR(lab_bgr, output_bgr)
-
-        cv2.imwrite("outputs/GroundTruth/" + str(i) + "lab.png", lab_bgr)
-        cv2.imwrite("outputs/Hint/" + str(i) + "hint.png", hint_bgr)
-        cv2.imwrite("outputs/Output/" + "_psnr:" + str(psnr) + ".png", output_bgr)
 
     print('Finished validation.')
     return set_loss.avg
@@ -114,16 +100,20 @@ if __name__ == "__main__":
     test_dataloader = data.DataLoader(test_dataset, batch_size=4, shuffle=True)
 
     model = ColorizationModel()
-    criterion = nn.MSELoss()
+    criterion = nn.L1Loss()
+    inception = inception_v3(pretrained=True)
 
     best_losses = 1e10
-    epochs = 50
+    epochs = 20
 
     device = torch.device('cuda')
     model.to(device)
     criterion.to(device)
+    inception.to(device)
 
     optimizer = optim.Adam(model.parameters(), lr=0.0012, weight_decay=1e-6)
+
+    path_load = ""
 
     for e in range(epochs):
         train(train_dataloader, model, criterion, optimizer, e)
@@ -134,6 +124,7 @@ if __name__ == "__main__":
             PATH = './checkpoints'
             if os.path.isdir(PATH) is False:
                 os.mkdir(PATH)
+            path_load = PATH + '/model-epoch-{}-losses-{:.3f}.pth'.format(e + 1, losses)
             torch.save({'model': model.state_dict(),
                         'optimizer': optimizer.state_dict()
-                        }, PATH + '/model-epoch-{}-losses-{:.3f}.pth'.format(e + 1, losses))
+                        }, path_load)

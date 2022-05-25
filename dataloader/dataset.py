@@ -44,13 +44,13 @@ class ColorHintDataset(data.Dataset):
             hint_img = cv2.imread(hint_file_name)
             mask_img = cv2.imread(mask_file_name)
 
-            input_l, input_hint = self.transforms(hint_img, mask_img)
-            sample = {"l": input_l, "hint": input_hint,
+            input_l, input_hint, l_inc = self.transforms(hint_img, mask_img)
+            sample = {"l": input_l, "hint": input_hint, "l_inc": l_inc,
                       "file_name": "image_%06d.png" % int(os.path.basename(hint_file_name).split('.')[0])}
         else:
             file_name = self.examples[idx]
             img = cv2.imread(file_name)
-            l, ab, hint = self.transforms(img)
-            sample = {"l": l, "ab": ab, "hint": hint}
+            l, ab, hint, l_inc = self.transforms(img)
+            sample = {"l": l, "ab": ab, "hint": hint, "l_inc": l_inc}
 
         return sample

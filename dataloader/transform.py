@@ -3,6 +3,7 @@ from torchvision import transforms
 import cv2
 import random
 import numpy as np
+from skimage.transform import resize
 
 
 class ColorHintTransform(object):
@@ -37,8 +38,10 @@ class ColorHintTransform(object):
 
             l, ab = self.bgr_to_lab(image)
             l_hint, ab_hint = self.bgr_to_lab(hint_image)
+            L = np.expand_dims(l, axis=1)
+            l_inc = resize(np.repeat(L, 3, axis=2), (299, 299)).transpose(2, 0, 1).astype(np.float32)
 
-            return self.transform(l), self.transform(ab), self.transform(ab_hint)
+            return self.transform(l), self.transform(ab), self.transform(ab_hint), self.transform(l_inc)
 
         elif self.mode == "test":
             image = cv2.resize(img, (self.size, self.size))
@@ -46,8 +49,10 @@ class ColorHintTransform(object):
 
             l, _ = self.bgr_to_lab(image)
             _, ab_hint = self.bgr_to_lab(hint_image)
+            L = np.expand_dims(l, axis=2)
+            l_inc = resize(np.repeat(L, 3, axis=2), (299, 299)).transpose(2, 0, 1).astype(np.float32)
 
-            return self.transform(l), self.transform(ab_hint)
+            return self.transform(l), self.transform(ab_hint), self.transform(l_inc)
 
         else:
             return NotImplementedError

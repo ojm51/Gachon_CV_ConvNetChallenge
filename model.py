@@ -52,7 +52,6 @@ class Encoder(nn.Module):
         return self.layers(x)
 
 
-"""
 class Fusion(nn.Module):
     def __init__(self):
         super(Fusion, self).__init__()
@@ -61,8 +60,8 @@ class Fusion(nn.Module):
         img2 = torch.stack([torch.stack([img2], dim=2)], dim=3)
         img2 = img2.repeat(1, 1, img1.shape[2], img1.shape[3])
 
-        return torch.cat((img1, img2), 1)
-"""
+        result = torch.cat((img1, img2), 1)
+        return result
 
 
 class Decoder(nn.Module):
@@ -112,15 +111,15 @@ class ColorizationModel(nn.Module):
     def __init__(self):
         super(ColorizationModel, self).__init__()
         self.encoder = Encoder()
-        # self.fusion = Fusion()
+        self.fusion = Fusion()
         self.decoder = Decoder()
-        # self.post_fusion = nn.Conv2d(1256, 256, kernel_size=1, stride=1, padding=1)
+        self.post_fusion = nn.Conv2d(1256, 256, kernel_size=1, stride=1, padding=0)
         self.relu = nn.ReLU(inplace=True)
 
-    def forward(self, x):
+    def forward(self, x, emb):
         x = self.encoder(x)
-        # x = self.fusion(x, emb)
-        # x = self.post_fusion(x)
+        x = self.fusion(x, emb)
+        x = self.post_fusion(x)
         x = self.relu(x)
         x = self.decoder(x)
 
