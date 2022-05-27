@@ -7,7 +7,6 @@ import torch.optim as optim
 from dataloader import dataset
 import tqdm
 from model import ColorizationModel, AverageMeter
-from torchvision.models import inception_v3
 
 
 def tensor2im(input_image, imtype=np.uint8):
@@ -33,13 +32,11 @@ def train(loader_train, model_train, crit, opt, epoch):
             l = data_t['l'].cuda()
             ab = data_t['ab'].cuda()
             hint = data_t['hint'].cuda()
-            l_inc = data_t['l_inc'].cuda()
 
         img_lab = torch.cat((l, ab), dim=1)
         img_hint = torch.cat((l, hint), dim=1)
 
-        out_inc = inception(l_inc)
-        output = model_train(img_hint, out_inc.logits)
+        output = model_train(img_hint)
         loss = crit(output, img_lab)
         set_loss.update(loss.item(), img_hint.size(0))
 
@@ -64,13 +61,11 @@ def validate(loader_val, model_val, crit):
             l = data_v['l'].cuda()
             ab = data_v['ab'].cuda()
             hint = data_v['hint'].cuda()
-            l_inc = data_v['l_inc'].cuda()
 
         img_lab = torch.cat((l, ab), dim=1)
         img_hint = torch.cat((l, hint), dim=1)
 
-        out_inc = inception(l_inc)
-        output = model_val(img_hint, out_inc.logits)
+        output = model_val(img_hint)
         loss = crit(output, img_lab)
         set_loss.update(loss.item(), img_hint.size(0))
 
@@ -96,20 +91,15 @@ if __name__ == "__main__":
     val_dataset = dataset.ColorHintDataset(root_path, 256, "val")
     val_dataloader = data.DataLoader(val_dataset, batch_size=4, shuffle=True)
 
-    test_dataset = dataset.ColorHintDataset(test_root, 256, "test")
-    test_dataloader = data.DataLoader(test_dataset, batch_size=4, shuffle=True)
-
     model = ColorizationModel()
     criterion = nn.L1Loss()
-    inception = inception_v3(pretrained=True)
 
     best_losses = 1e10
-    epochs = 20
+    epochs = 50
 
     device = torch.device('cuda')
     model.to(device)
     criterion.to(device)
-    inception.to(device)
 
     optimizer = optim.Adam(model.parameters(), lr=0.0012, weight_decay=1e-6)
 

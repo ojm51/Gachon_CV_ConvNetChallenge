@@ -5,7 +5,7 @@
       <paths name="imes-server2">
         <serverdata>
           <mappings>
-            <mapping deploy="/CNC_nms" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/nms/convnet" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>

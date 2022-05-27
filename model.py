@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from custom_inception import inception_net
 
 
 class Encoder(nn.Module):
@@ -111,14 +112,16 @@ class ColorizationModel(nn.Module):
     def __init__(self):
         super(ColorizationModel, self).__init__()
         self.encoder = Encoder()
+        self.inception = inception_net()
         self.fusion = Fusion()
         self.decoder = Decoder()
         self.post_fusion = nn.Conv2d(1256, 256, kernel_size=1, stride=1, padding=0)
         self.relu = nn.ReLU(inplace=True)
 
-    def forward(self, x, emb):
-        x = self.encoder(x)
-        x = self.fusion(x, emb)
+    def forward(self, x):
+        y = self.encoder(x)
+        z = self.inception(x)
+        x = self.fusion(y, z)
         x = self.post_fusion(x)
         x = self.relu(x)
         x = self.decoder(x)

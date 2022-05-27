@@ -6,7 +6,6 @@ from dataloader import dataset
 import tqdm
 from model import ColorizationModel
 import cv2
-from torchvision.models import inception_v3
 
 
 use_gpu = True
@@ -31,12 +30,11 @@ def test(loader_test, model_test):
         if use_gpu:
             l = data_test['l'].cuda()
             hint = data_test['hint'].cuda()
-            l_inc = data_test['l_inc'].cuda()
+            # l_inc = data_test['l_inc'].cuda()
 
         img_hint = torch.cat((l, hint), dim=1)
 
-        out_inc = inception(l_inc)
-        output = model_test(img_hint, out_inc)
+        output = model_test(img_hint)
 
         output_np = tensor2im(output)
         output_bgr = cv2.cvtColor(output_np, cv2.COLOR_LAB2BGR)
@@ -55,14 +53,12 @@ test_dataloader = data.DataLoader(test_dataset, batch_size=1)
 
 model_pretrained = ColorizationModel()
 criterion = nn.L1Loss()
-inception = inception_v3(pretrained=True)
 
 device = torch.device('cuda')
 model_pretrained.to(device)
 criterion.to(device)
-inception.to(device)
 
-checkpoint = torch.load("./checkpoints/model-epoch-47-losses-0.026.pth", map_location=device)
+checkpoint = torch.load("./checkpoints/model-epoch-39-losses-0.030.pth", map_location=device)
 model_pretrained.load_state_dict(checkpoint['model'])
 with torch.no_grad():
     test(test_dataloader, model_pretrained)
