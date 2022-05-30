@@ -34,11 +34,12 @@ def train(loader_train, model_train, crit, opt, epoch):
             hint = data_t['hint'].cuda()
 
         img_lab = torch.cat((l, ab), dim=1)
-        img_hint = torch.cat((l, hint), dim=1)
+        # img_hint = torch.cat((l, hint), dim=1)
 
-        output = model_train(img_hint)
-        loss = crit(output, img_lab)
-        set_loss.update(loss.item(), img_hint.size(0))
+        output = model_train(hint)
+        img_out = torch.cat((l, output), dim=1)
+        loss = crit(img_out, img_lab)
+        set_loss.update(loss.item(), img_out.size(0))
 
         opt.zero_grad()
         loss.backward()
@@ -63,11 +64,12 @@ def validate(loader_val, model_val, crit):
             hint = data_v['hint'].cuda()
 
         img_lab = torch.cat((l, ab), dim=1)
-        img_hint = torch.cat((l, hint), dim=1)
+        # img_hint = torch.cat((l, hint), dim=1)
 
-        output = model_val(img_hint)
-        loss = crit(output, img_lab)
-        set_loss.update(loss.item(), img_hint.size(0))
+        output = model_val(hint)
+        img_out = torch.cat((l, output), dim=1)
+        loss = crit(img_out, img_lab)
+        set_loss.update(loss.item(), img_out.size(0))
 
         if i % 100 == 0:
             print('Validate: [{0}/{1}]\tLoss {loss.val:.4f} ({loss.avg:.4f})\t'.format(i, len(loader_val),
@@ -101,7 +103,7 @@ if __name__ == "__main__":
     model.to(device)
     criterion.to(device)
 
-    optimizer = optim.Adam(model.parameters(), lr=0.0012, weight_decay=1e-6)
+    optimizer = optim.Adam(model.parameters(), lr=0.00005, weight_decay=0)
 
     path_load = ""
 

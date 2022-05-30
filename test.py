@@ -34,9 +34,10 @@ def test(loader_test, model_test):
 
         img_hint = torch.cat((l, hint), dim=1)
 
-        output = model_test(img_hint)
+        output = model_test(hint)
+        img_out = torch.cat((l, output), dim=1)
 
-        output_np = tensor2im(output)
+        output_np = tensor2im(img_out)
         output_bgr = cv2.cvtColor(output_np, cv2.COLOR_LAB2BGR)
 
         hint_np = tensor2im(img_hint)
@@ -58,7 +59,7 @@ device = torch.device('cuda')
 model_pretrained.to(device)
 criterion.to(device)
 
-checkpoint = torch.load("./checkpoints/model-epoch-39-losses-0.030.pth", map_location=device)
+checkpoint = torch.load("./checkpoints/model-epoch-49-losses-0.014.pth", map_location=device)
 model_pretrained.load_state_dict(checkpoint['model'])
 with torch.no_grad():
     test(test_dataloader, model_pretrained)

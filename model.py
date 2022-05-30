@@ -9,7 +9,7 @@ class Encoder(nn.Module):
 
         self.layers = nn.Sequential(
             # Convolutional 1
-            nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1),
+            nn.Conv2d(2, 64, kernel_size=3, stride=2, padding=1),
             nn.ReLU(inplace=True),
             nn.BatchNorm2d(64),
 
@@ -97,7 +97,7 @@ class Decoder(nn.Module):
             nn.BatchNorm2d(32),
 
             # Convolutional 5
-            nn.Conv2d(32, 3, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(32, 2, kernel_size=3, stride=1, padding=1),
             nn.Tanh(),
 
             # Upsampling 3

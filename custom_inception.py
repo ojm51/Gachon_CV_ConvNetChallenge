@@ -1,6 +1,5 @@
 import torch.nn as nn
 import torch
-import torch.nn.functional as F
 
 
 class StemBlock(nn.Module):
@@ -9,7 +8,7 @@ class StemBlock(nn.Module):
 
         self.layers = nn.Sequential(
             # Convolutional 1
-            nn.Conv2d(3, 32, kernel_size=3, stride=2, padding=0),
+            nn.Conv2d(2, 32, kernel_size=3, stride=2, padding=0),
             nn.BatchNorm2d(32),
             nn.ReLU(inplace=True),
 
